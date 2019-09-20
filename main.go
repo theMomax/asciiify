@@ -1,25 +1,29 @@
 package main
 
 import (
-	"fmt"
-	"os"
-
-	options "github.com/qeesung/image2ascii/convert"
-	"github.com/theMomax/asciiify/convert"
+	tm "github.com/buger/goterm"
 )
 
 func main() {
-	g := convert.NewGIFConverter()
+	tm.Println()
 
-	convertOptions := options.DefaultOptions
+	// tm.GetXY()
 
-	asciiif, err := g.FromFile(os.Args[1], &convertOptions)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	for _, i := range asciiif.Image {
-		fmt.Println("=========================================================")
-		fmt.Println(i)
-	}
+	// // tm.Clear()
+
+	// asciiif, err := g.FromFile(os.Args[1], &convertOptions)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	return
+	// }
+
+	// for _, i := range asciiif.Image {
+	// 	tm.MoveCursor(1, h)
+
+	// 	tm.Println(i)
+
+	// 	tm.Flush()
+
+	// 	time.Sleep(time.Second)
+	// }
 }
