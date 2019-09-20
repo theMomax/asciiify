@@ -76,8 +76,11 @@ func DecodeGIF(gif *gif.GIF, options ...*convert.Options) *ASCIIIF {
 	return &a
 }
 
+// DecodeGIFAsync is an asynchronous version of DecodeGIF. It returns the
+// ASCIIIF's LoopCount immediately and closes the returned channel, after all
+// frames have been converted and sent.
 func DecodeGIFAsync(gif *gif.GIF, options ...*convert.Options) (int, <-chan *ASCIIIFrame) {
-	f := make(chan *ASCIIIFrame)
+	f := make(chan *ASCIIIFrame, 10)
 
 	go func() {
 		defer close(f)
@@ -104,8 +107,41 @@ func DecodeGIFAsync(gif *gif.GIF, options ...*convert.Options) (int, <-chan *ASC
 	return gif.LoopCount, f
 }
 
+// DecodeGIFStreamed streams the complete resulting ASCIIIF asynchronously. The
+// returned channel is closed, when all frames have been sent for as many times
+// as specified by the gif's LoopCount. The returned channel may be closed by
+// the receiving side.
 func DecodeGIFStreamed(gif *gif.GIF, options ...*convert.Options) (frames <-chan *ASCIIIFrame) {
-	return nil // TODO: implement
+	f := make(chan *ASCIIIFrame, 10)
+
+	go func() {
+		defer close(f)
+		defer recover() // handle send on closed channel
+
+		infinite := gif.LoopCount == 0
+		once := gif.LoopCount == -1
+		count := gif.LoopCount
+
+		cache := make([]*ASCIIIFrame, len(gif.Image))
+
+		_, frames := DecodeGIFAsync(gif, options...)
+
+		for infinite || once || count >= 0 {
+
+			for i := range cache {
+				if cache[i] == nil {
+					// frames being closed at this point should not be possible
+					cache[i] = <-frames
+				}
+
+				f <- cache[i]
+			}
+
+			once = false
+			count--
+		}
+	}()
+	return f
 }
 
 // gifConverter provides methods to convert GIF to ASCIIIF
