@@ -1,9 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"image/color"
 	"image/gif"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -14,11 +14,9 @@ import (
 	"github.com/tomnomnom/xtermcolor"
 )
 
-func main() {
-	if len(os.Args) == 0 {
-		log.Println("Self recursion!")
-	}
+//go:generate go-bindata "Happy B-Day 716.gif"
 
+func main() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
@@ -36,16 +34,18 @@ func main() {
 	goncurses.Cursor(0)
 	stdscr.ScrollOk(false)
 
-	gifFile, err := os.Open(os.Args[1])
+	gifData, err := Asset("Happy B-Day 716.gif")
 	if err != nil {
 		panic(err)
 	}
-	defer gifFile.Close()
 
-	gif, err := gif.DecodeAll(gifFile)
+	gif, err := gif.DecodeAll(bytes.NewReader(gifData))
 	if err != nil {
 		panic(err)
 	}
+
+	// don't make it repeating
+	gif.LoopCount = -1
 
 	vid := asciiif.DecodeGIFStreamed(gif)
 
@@ -56,6 +56,7 @@ func main() {
 	}
 
 	for img := range vid {
+		start := time.Now()
 		for y, row := range img.Image {
 			for x, pix := range row {
 				stdscr.ColorOn(int16(xtermcolor.FromColor(color.RGBA{pix.R, pix.G, pix.B, pix.A})))
@@ -63,14 +64,10 @@ func main() {
 			}
 		}
 		stdscr.Refresh()
-		time.Sleep(time.Duration(img.Delay) * 10 * time.Millisecond)
+		took := time.Since(start)
+		delay := time.Duration(img.Delay) * 10 * time.Millisecond
+		if took < delay {
+			time.Sleep(delay - took)
+		}
 	}
-
-	/*
-		fmt.Println(os.Args)
-		if len(os.Args) > 1 {
-			syscall.Exec(os.Args[0], os.Args[1:], os.Environ())
-		} else {
-			syscall.Exec(os.Args[0], []string{}, os.Environ())
-		}*/
 }
